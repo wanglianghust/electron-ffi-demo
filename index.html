@@ -57,19 +57,33 @@ We are using node
                 'StrLength': ['int', ['string']]
             })
             console.log('fii.Library result:', Dll);
-
             //int rbt_win_config_net(const char *ip, int port, bool mqtt, bool tcp, const char *source = "");
             //bool rbt_win_send_startanswer(int type, int totalTopic, char* pTopicType, const char* mac = "");
             window.robotpenetdevice = ffi.Library('dll/robotpenetdevice.dll', {
-                'rbt_win_init': ['bool', ['void**']],
+                'rbt_win_init': ['bool', []],
                 'rbt_win_start': ['bool', []],
                 'rbt_win_config_net': ['int', ['string', 'int', 'bool', 'bool', 'string']],
                 'rbt_win_send_startanswer': ['bool', ['int', 'int', 'string', 'string']],
+                //'rbt_win_send_startanswer': ['bool', ['int', 'string']],
 
                 //回调方法
-                'rbt_win_set_accept_cb': ['void', ['void**']],
-                'rbt_win_set_origindata_cb': ['void', ['void**']],
+                 'rbt_win_set_accept_cb': ['void', ['pointer']],
+                 'rbt_win_set_origindata_cb': ['void', ['pointer']],
             })
+
+             //设备上线回调(rbt_win_context* context, const char* pClientIpAddress);
+            let onAccept = ffi.Callback('void', ['pointer', 'string'], (context, pClientIpAddress) => {
+                console.log('onAccept: context', context, ', pClientIpAddress: ', pClientIpAddress)
+            });
+            //笔迹数据回调 rbt_win_context* ctx, const char* pMac, ushort us, ushort ux, ushort uy, ushort up, unsigned char *buffer, int len
+            let onOriginData = ffi.Callback('void', ['pointer', 'string', 'ushort', 'ushort', 'ushort', 'ushort', 'string', 'int'],
+                (ctx, pMac,us,ux,uy,up,buffer,len) => {
+                console.log('onOriginData: pMac', pMac, ', ux: ', ux)
+            });
+            robotpenetdevice.rbt_win_set_accept_cb(onAccept);
+            robotpenetdevice.rbt_win_set_origindata_cb(onOriginData);
+
+
             console.log('robotpenetdevice.Library result:', robotpenetdevice);
 
             window.TabletRemoteControllerAdapter = ffi.Library('dll/TabletRemoteControllerAdapter.dll', {
@@ -97,73 +111,37 @@ We are using node
 
     function luobo() {
         try {
-            // let objectPtr = {};
-
-            // char ip[32]; //本机ip，默认为空
-            // int port;	//监听端口，6001
-            // int listenCount; //最大连接数 默认60
-            // bool open;  //是否打开模组， 默认打开
-            // bool optimize;	//是否输出优化笔记，默认关闭
-            // rbt_win_context* ctx; //上下文指针
-
-            // var ref = require('ref');
-            // var StructType = require('ref-struct');
-            // var MyStruct = StructType();
-            // MyStruct.defineProperty('ip', ref.types.char);
-            // MyStruct.defineProperty('port', ref.types.int);
-            // MyStruct.defineProperty('listenCount', ref.types.int);
-            // MyStruct.defineProperty('open', ref.types.bool);
-            // MyStruct.defineProperty('optimize', ref.types.bool);
-            // var i = new MyStruct();
-
-            // const ref = require('ref')
-            // const Struct = require('ref-struct')
-            // const refArray = require('ref-array')
-            // const _Init_Param = Struct({
-            //   ip: refArray(ref.types.char, 32),
-            //   port: ref.types.int,
-            //   listenCount:  ref.types.int,
-            //   open:  ref.types.bool,
-            //   optimize:  ref.types.bool
-            // })
-            // console.log("_Init_Param:  "+_Init_Param);
-
-
             var ref = require('ref')
             var MyStruct = require('ref-struct')
             const refArray = require('ref-array')
-            let object = ref.types.void
-            let objectPtr =ref.refType(object)
-            var Init_Param = MyStruct({
-                ip: refArray(ref.types.char, 32),
-                port: ref.types.int,
-                listenCount: ref.types.int,
-                open: ref.types.bool,
-                optimize: ref.types.bool,
-                ctx: objectPtr,
-            });
-            // var Init_Param2 = MyStruct();
-            // Init_Param2.defineProperty('ip', ref.types.char);
-            // Init_Param2.defineProperty('port', ref.types.int);
-            // Init_Param2.defineProperty('listenCount', ref.types.int);
-            // Init_Param2.defineProperty('open', ref.types.bool);
-            // Init_Param2.defineProperty('optimize', ref.types.bool);
-            // Init_Param2.defineProperty('ctx', ref.types.void);
 
+            let object = ref.types.void
+            let objectPtr = ref.refType(object)
+            var Init_Param = MyStruct({
+                ip: refArray(ref.types.char, 32),// char ip[32]; //本机ip，默认为空
+                //ip:  ref.types.string,// char ip[32]; //本机ip，默认为空
+                port: ref.types.int,// int port;	//监听端口，6001
+                listenCount: ref.types.int, // int listenCount; //最大连接数 默认60
+                open: ref.types.bool, // bool open;  //是否打开模组， 默认打开
+                optimize: ref.types.bool, // bool optimize;	//是否输出优化笔记，默认关闭
+                //ctx:  ref.refType('pointer'), // rbt_win_context* ctx; //上下文指针
+                ctx:  objectPtr, // rbt_win_context* ctx; //上下文指针
+            });
             //初始化
-            var _Init_Param = new Init_Param("", 6001, false, true, "");
-            var s = robotpenetdevice.rbt_win_init(_Init_Param);
+            //var _Init_Param = new Init_Param({port: 6001,listenCount:60,open:true,optimize:false,ctx: objectPtr.ref()});
+            var _Init_Param = new Init_Param;
+            debugger;
+            var s = robotpenetdevice.rbt_win_init();
             console.log("rbt_win_init  " + s);
 
             //开始服务
             var s1 = robotpenetdevice.rbt_win_start();
             console.log("rbt_win_start  " + s1);
 
-            //robotpenetdevice.rbt_win_config_net("", 6001, false, true, "")
-
-            var ss = robotpenetdevice.rbt_win_send_startanswer(1, 3, "111", "");
-            console.log("rbt_win_send_startanswer  " + ss);
-
+            //开始答题
+            var s3 = robotpenetdevice.rbt_win_send_startanswer(1, 3, "1", "");
+            // var s3 = robotpenetdevice.rbt_win_send_startanswer(1,"1");
+            console.log("rbt_win_send_startanswer  " + s3);
         } catch (e) {
             console.log(e);
         }
@@ -172,7 +150,7 @@ We are using node
     function JavaTabletRemoteController() {
         TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_init();
         TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_start();
-        TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_sendStartAnswer(1, 3, "111", "");
+        TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_sendStartAnswer(1, 3, "1", "");
     }
 
 
