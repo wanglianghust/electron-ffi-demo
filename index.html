@@ -27,9 +27,7 @@
     <input type="text">
     <button type="button" onclick="plus()">计算</button>
     <button type="button" onclick="init()">luobo_init</button>
-    <button type="button" onclick="rbt_win_send_startanswer()">rbt_win_send_startanswer</button>
-
-    <button type="button" onclick="JavaTabletRemoteController()">JavaTabletRemoteController</button>
+    <button type="button" onclick="rbt_win_send_startanswer()">发题</button>
 </div>
 
 <h3>C++ Function strlen() :
@@ -53,6 +51,19 @@ We are using node
     var ref = require('ref')
     var MyStruct = require('ref-struct')
     const refArray = require('ref-array')
+
+    let object = ref.types.void
+    let objectPtr = ref.refType(object)
+    var Init_Param = MyStruct({
+        //ip: refArray(ref.types.char, 32),// char ip[32]; //本机ip，默认为空
+        ip: 'string',// char ip[32]; //本机ip，默认为空
+        port: ref.types.int,// int port;	//监听端口，6001
+        listenCount: ref.types.int, // int listenCount; //最大连接数 默认60
+        open: ref.types.bool, // bool open;  //是否打开模组， 默认打开
+        optimize: ref.types.bool, // bool optimize;	//是否输出优化笔记，默认关闭
+        ctx:  ref.refType('pointer'), // rbt_win_context* ctx; //上下文指针
+        //ctx:  objectPtr, // rbt_win_context* ctx; //上下文指针
+    });
     window.onload = function () {
         try {
             // Create funtions
@@ -65,7 +76,9 @@ We are using node
             //int rbt_win_config_net(const char *ip, int port, bool mqtt, bool tcp, const char *source = "");
             //bool rbt_win_send_startanswer(int type, int totalTopic, char* pTopicType, const char* mac = "");
             window.robotpenetdevice = ffi.Library('dll/robotpenetdevice.dll', {
-                'rbt_win_init': ['bool', []],
+                //'rbt_win_init': ['bool', [ref.refType(Init_Param)]],
+                //bool rbt_win_init2(int port = 6001, int listenCount = 60, bool open = true, bool optimize = false);
+                'rbt_win_init2': ['bool', ['int','int','bool','bool']],
                 'rbt_win_start': ['bool', []],
                 'rbt_win_config_net': ['int', ['string', 'int', 'bool', 'bool', 'string']],
                 'rbt_win_send_startanswer': ['bool', ['int', 'int', 'string', 'string']],
@@ -75,19 +88,14 @@ We are using node
                  'rbt_win_set_accept_cb': ['void', ['pointer']],
                  'rbt_win_set_origindata_cb': ['void', ['pointer']],
             })
-
-
-
-
-
             console.log('robotpenetdevice.Library result:', robotpenetdevice);
 
-            window.TabletRemoteControllerAdapter = ffi.Library('dll/TabletRemoteControllerAdapter.dll', {
-                'Java_com_tal_seg_paperpenclassroom_TabletRemoteController_init': ['int', []],
-                'Java_com_tal_seg_paperpenclassroom_TabletRemoteController_start': ['bool', []],
-                'Java_com_tal_seg_paperpenclassroom_TabletRemoteController_sendStartAnswer': ['bool', ['int', 'int', 'string', 'string']],
-            })
-            console.log('TabletRemoteControllerAdapter.Library result:', TabletRemoteControllerAdapter);
+            // window.TabletRemoteControllerAdapter = ffi.Library('dll/TabletRemoteControllerAdapter.dll', {
+            //     'Java_com_tal_seg_paperpenclassroom_TabletRemoteController_init': ['int', []],
+            //     'Java_com_tal_seg_paperpenclassroom_TabletRemoteController_start': ['bool', []],
+            //     'Java_com_tal_seg_paperpenclassroom_TabletRemoteController_sendStartAnswer': ['bool', ['int', 'int', 'string', 'string']],
+            // })
+            // console.log('TabletRemoteControllerAdapter.Library result:', TabletRemoteControllerAdapter);
 
             // Call C++ function Hello
             document.getElementById('hello').innerHTML = Dll.Hello()
@@ -107,27 +115,8 @@ We are using node
 
     function init() {
         try {
-            // let object = ref.types.void
-            // let objectPtr = ref.refType(object)
-            // var Init_Param = MyStruct({
-            //     //ip: refArray(ref.types.char, 32),// char ip[32]; //本机ip，默认为空
-            //     ip:  ref.types.string,// char ip[32]; //本机ip，默认为空
-            //     port: ref.types.int,// int port;	//监听端口，6001
-            //     listenCount: ref.types.int, // int listenCount; //最大连接数 默认60
-            //     open: ref.types.bool, // bool open;  //是否打开模组， 默认打开
-            //     optimize: ref.types.bool, // bool optimize;	//是否输出优化笔记，默认关闭
-            //     //ctx:  ref.refType('pointer'), // rbt_win_context* ctx; //上下文指针
-            //     ctx:  objectPtr, // rbt_win_context* ctx; //上下文指针
-            // });
-            // //初始化
-            // //var _Init_Param = new Init_Param({port: 6001,listenCount:60,open:true,optimize:false,ctx: objectPtr.ref()});
-            // var param = new Init_Param;
-            // param.ctx = this;
-            // param.port = 6001;
-            // param.open = true;
-            // param.optimize = false;
-            // param.listenCount = 128;
-            var s = robotpenetdevice.rbt_win_init();
+            //初始化
+            var s = robotpenetdevice.rbt_win_init2(6001,60,true,false);
             console.log("rbt_win_init  " + s);
 
             //设备上线回调
@@ -157,12 +146,6 @@ We are using node
         var s3 = robotpenetdevice.rbt_win_send_startanswer(1, 3, "1", "");
         // var s3 = robotpenetdevice.rbt_win_send_startanswer(1,"1");
         console.log("rbt_win_send_startanswer  " + s3);
-    }
-
-    function JavaTabletRemoteController() {
-        TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_init();
-        TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_start();
-        TabletRemoteControllerAdapter.Java_com_tal_seg_paperpenclassroom_TabletRemoteController_sendStartAnswer(1, 3, "1", "");
     }
 
 
